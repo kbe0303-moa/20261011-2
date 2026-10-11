@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>우리 반 랜덤 자리 배치</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: "Malgun Gothic", sans-serif;
+  background: linear-gradient(135deg, #eef2ff, #dff7f2);
+  color: #25304a;
+}
+
+.container {
+  max-width: 850px;
+  margin: auto;
+  padding: 30px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+h1 {
+  font-size: 30px;
+  margin: 0 0 10px;
+}
+
+.subtitle {
+  color: #64748b;
+  margin-bottom: 28px;
+}
+
+.blackboard {
+  width: 85%;
+  margin: 0 auto;
+  padding: 16px;
+  background: #24594b;
+  border: 7px solid #bd9770;
+  border-radius: 8px;
+  color: white;
+  font-size: 23px;
+  font-weight: bold;
+  box-shadow: 0 5px 8px rgba(0,0,0,0.12);
+}
+
+.teacher {
+  background: #f1e5cf;
+  border: 2px solid #ddc29a;
+  border-radius: 8px;
+  padding: 10px 22px;
+  width: fit-content;
+  margin: 18px auto 30px;
+  font-weight: bold;
+}
+
+.classroom {
+  background: #f8fafc;
+  padding: 26px;
+  border-radius: 20px;
+  border: 2px solid #e2e8f0;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.seat {
+  min-height: 80px;
+  background: #e2e8f0;
+  border: 2px solid #cbd5e1;
+  border-bottom: 5px solid #94a3b8;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: 0.25s;
+}
+
+.seat .number {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.seat .label {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.seat.assigned {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  border-bottom-color: #6366f1;
+  color: #3730a3;
+}
+
+.seat.assigned .label {
+  color: #6366f1;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 14px;
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 15px 24px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+.draw-btn {
+  background: #4f46e5;
+  color: white;
+}
+
+.reset-btn {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.copy-btn {
+  background: #0f766e;
+  color: white;
+}
+
+.status {
+  color: #475569;
+  font-size: 16px;
+  min-height: 26px;
+  margin-top: 12px;
+}
+
+.footer {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 23px;
+  }
+
+  .classroom {
+    padding: 10px;
+  }
+
+  .seat-grid {
+    gap: 6px;
+  }
+
+  .seat {
+    min-height: 62px;
+    border-radius: 8px;
+  }
+
+  .seat .number {
+    font-size: 18px;
+  }
+
+  .seat .label {
+    font-size: 10px;
+  }
+
+  button {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>🎲 우리 반 랜덤 자리 배치</h1>
+
+  <p class="subtitle">
+    1번부터 30번까지 공정하게 자리를 뽑아요!
+  </p>
+
+  <div class="blackboard">칠 판</div>
+
+  <div class="teacher">👩‍🏫 교탁</div>
+
+  <div class="classroom">
+    <div class="seat-grid" id="seatGrid"></div>
+  </div>
+
+  <div class="controls">
+    <button class="draw-btn" onclick="drawSeats()">
+      🎲 자리 뽑기
+    </button>
+
+    <button class="reset-btn" onclick="resetSeats()">
+      🔄 초기화
+    </button>
+
+    <button class="copy-btn" onclick="copySeats()">
+      📋 결과 복사
+    </button>
+  </div>
+
+  <div class="status" id="status"
+       role="status" aria-live="polite">
+    자리 뽑기 버튼을 눌러주세요!
+  </div>
+
+  <div class="footer">
+    총 30명 | 5열 × 6행 | 중복 없는 랜덤 배정
+  </div>
+
+</div>
+
+<script>
+const TOTAL_STUDENTS = 30;
+const COLUMNS = 5;
+const ROWS = 6;
+
+const seatGrid = document.getElementById("seatGrid");
+const statusText = document.getElementById("status");
+
+let currentSeats = [];
+
+// 자리 30개 생성
+function createSeats() {
+  seatGrid.innerHTML = "";
+
+  for (let i = 0; i < TOTAL_STUDENTS; i++) {
+    const seat = document.createElement("div");
+    seat.className = "seat";
+    seat.id = "seat-" + i;
+
+    seat.innerHTML = `
+      <span class="number">?</span>
+      <span class="label">${i + 1}번 자리</span>
+    `;
+
+    seatGrid.appendChild(seat);
+  }
+}
+
+// 무작위 자리 배정
+function drawSeats() {
+
+  const students = Array.from(
+    { length: TOTAL_STUDENTS },
+    (_, i) => i + 1
+  );
+
+  // Fisher-Yates 무작위 셔플
+  for (let i = students.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [students[i], students[j]] =
+      [students[j], students[i]];
+  }
+
+  currentSeats = students;
+
+  // 자리 배정 화면 갱신
+  currentSeats.forEach((student, index) => {
+    const seat = document.getElementById("seat-" + index);
+
+    seat.classList.add("assigned");
+
+    seat.querySelector(".number").textContent = student;
+
+    seat.querySelector(".label").textContent = "번 학생";
+  });
+
+  statusText.textContent =
+    "🎉 30명 전원의 자리 배정이 완료되었습니다!";
+}
+
+// 초기화
+function resetSeats() {
+  currentSeats = [];
+  createSeats();
+
+  statusText.textContent =
+    "자리 배치가 초기화되었습니다. 다시 추첨해 주세요.";
+}
+
+// 결과 복사
+async function copySeats() {
+
+  if (currentSeats.length === 0) {
+    statusText.textContent =
+      "먼저 자리를 뽑아주세요!";
+    return;
+  }
+
+  let result = "우리 반 자리 배치표\n";
+  result += "칠판 / 교탁 방향\n\n";
+
+  for (let row = 0; row < ROWS; row++) {
+
+    const rowStudents = currentSeats.slice(
+      row * COLUMNS,
+      (row + 1) * COLUMNS
+    );
+
+    result += rowStudents
+      .map(num => String(num).padStart(2, "0") + "번")
+      .join("  |  ");
+
+    result += "\n";
+  }
+
+  try {
+    // 최신 브라우저의 클립보드 API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(result);
+    } else {
+      // 로컬 HTML 파일에서도 동작하는 대체 방식
+      const textarea = document.createElement("textarea");
+      textarea.value = result;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      const success = document.execCommand("copy");
+      document.body.removeChild(textarea);
+
+      if (!success) {
+        throw new Error("복사 실패");
+      }
+    }
+
+    statusText.textContent =
+      "📋 자리 배치 결과가 복사되었습니다!";
+  } catch (error) {
+    statusText.textContent =
+      "복사가 제한되었습니다. 브라우저 권한을 확인하세요.";
+  }
+}
+
+// 처음 실행
+createSeats();
+</script>
+
+</body>
+</html>
